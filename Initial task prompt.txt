@@ -1,0 +1,122 @@
+I want to create a new streamlit app to visualize some of the results and collaborate with partners on it. The app should have the following functionality:
+1 Select a dataset as reference and one to compare with. (Register all available pivot tables, which should be found under subdirectory pivots/(residue or atom)/(effective ineffective or neutral)/data_pivot_(run_num).pckl ) run_num are like: 0500, 2094
+2 Select a calculation/presentation form: linear presentation of KE, logarithmic presentation of KE, reordering based on the reference either using persistence or streak length as basis for evaluation
+3 for any view always have the option to either show the absolute values of the KE or their per frame distribution
+4.1 for the absolute value plots show the histogram of absolute values for both the reference plot and the run dataset (same plot, different colors)
+4.2 for the relative value plots show the histograms of the per frame realtive values for both
+4.3 These are 3 plots so far. One for the reference one for the act run and one for the histograms. How the first two should be calculated should be controlled by buttons. However. The coloring range for first two plots should be dynamic. Meaning that the user can define a band or multiple bands on the histogram plot. The coloring scale on the first two plots should correspond to the band. If there are multiple bands defined, use different color scales for each.
+5. There should be an area next to the histogram where a zoomed in paired version of the first two plots appear. Meaning: if either of the first two plots are hovered over a 10 x 10 cell zoomed in version of the reference plot and run plot should appear in this window, next to each other to ease visual comparison. There should be buttons to enlarge this zoomed in pair-window. The same coloring sclae should be used as in the first two plots (dynamically determined by the histogram plot). If either of the first two figures are clicked, the zoomed in view should freeze at the clicked position. If either of the first two figures are clicked again, release the view and go back to determining it dynamically.
+6. There should be options to register to the app and sign in.
+7. Signed in users should have the option to save the app settings, make a snapshot of all figures as they currently look and leave comments for other users referencing the current state. Signed in users should have a button 'Save current state and comment'. This should lead them to a separate page where the screenshot of the current state is on the left and a comment box is on the right. There they can type comments with the option to save and later edit or delete them (If it is there own comment).
+8. There should be a page where the existing comments are visible to all users. Here beyond  editing or deleting your comments there should be an option to load the saved state (weather it was saved by your account or someone else's) and continue the session.
+
+General instructions: Implement error handling and logging. 
+
+All of this is rather complex. If you try to implement it all at once you will likely fail in generating an answer. Therefore we will work in phases. 
+-In phase 0 we will only talk about the modules and relevant functions that should be implemented outlining a plan without actually implementing it. 
+- In phase 1 we will implement the app to run locally. We will use choices that simulate or run a database (for user registration/ login and comment/state handling) locally. We will go step by step in generating functions. If you need to generate multiple functions in a module or in different modules end your prompt, prompting me to ask you to continue. Thus we should avoid stuffing too much complexity in a single answer.
+- phase 2 will be migrating the code to online servers after local testing. The same rules for code generation applies as before, go step by step function by function prompting me to prompt you to continue before generating multi-function multi-module answers.
+
+ChatGPT said:
+ChatGPT
+That sounds like an exciting and collaborative project! Let's start by outlining a structured plan for Phase 0. We'll define the modules and functions that will need to be implemented for this Streamlit app, breaking down the complexities into manageable parts.
+
+Phase 0: Planning Modules and Relevant Functions
+Overview of the Modules
+Main Application Module (app.py):
+
+Entry point for the Streamlit app.
+Provides the user interface for the dataset selection, visualization, settings saving, and commenting.
+Data Handling Module (data_handler.py):
+
+Handles loading and registration of datasets.
+Functions to process different forms of kinetic energy (linear, logarithmic).
+Handles pivot table lookup and data extraction.
+User Authentication Module (auth.py):
+
+Handles user registration, login, and session management.
+Uses a local database (e.g., SQLite) for Phase 1.
+Visualization Module (visualization.py):
+
+Handles the plotting of heatmaps and histograms.
+Implements zoom-in functionality and dynamic color scaling based on user-selected bands.
+Manages interactivity like hovering and clicking.
+Settings and State Management Module (state_manager.py):
+
+Saves and loads the state of the app.
+Manages saving user-specific settings, creating snapshots, and leaving comments.
+Comment Handling Module (comments.py):
+
+Handles creating, viewing, editing, and deleting comments.
+Manages relationships between saved states and comments for collaboration.
+Relevant Functions in Each Module
+1. Main Application Module (app.py)
+
+main(): The main function that runs the Streamlit app.
+setup_sidebar(): Handles setting up the sidebar for dataset selection, settings, and login.
+handle_user_session(): Manages user authentication and session.
+render_plots(): Handles plotting logic and communication between the visualization functions.
+handle_zoom_interactivity(): Manages interactions like zooming in on specific parts of the plots.
+2. Data Handling Module (data_handler.py)
+
+register_available_datasets(): Scans directories for available pivot tables and registers them.
+load_dataset(run_num, resolution): Loads the pivot table for a specific run and resolution type.
+process_ke_data(dataset, form): Processes kinetic energy data to return either linear or logarithmic values.
+3. User Authentication Module (auth.py)
+
+register_user(username, password): Registers a new user.
+login_user(username, password): Authenticates an existing user.
+logout_user(): Logs out the current user.
+is_user_logged_in(): Checks if a user is logged in.
+4. Visualization Module (visualization.py)
+
+plot_heatmap(dataset, value_type, colormap): Generates heatmap for the selected dataset.
+plot_histogram(reference_data, comparison_data, value_type): Generates histograms for reference and comparison datasets.
+highlight_histogram_bands(bands): Highlights user-defined bands on the histogram.
+zoomed_in_view(reference_data, comparison_data, zoom_area): Generates a zoomed-in view based on user interaction.
+update_color_scale(histogram_bands): Updates the color scale of the heatmaps based on the histogram selection.
+5. Settings and State Management Module (state_manager.py)
+
+save_app_state(user_id, state_data): Saves the current app state for a user.
+load_app_state(state_id): Loads a previously saved state.
+get_user_saved_states(user_id): Retrieves all saved states for a user.
+6. Comment Handling Module (comments.py)
+
+create_comment(user_id, state_id, comment_text): Creates a new comment for a saved state.
+view_comments(): Displays all comments in the app.
+edit_comment(comment_id, new_text): Allows a user to edit their comment.
+delete_comment(comment_id): Deletes a user’s comment.
+load_state_from_comment(comment_id): Loads the app state linked to a specific comment.
+High-Level Flow
+Dataset Selection:
+
+Users will select a reference dataset and a comparison dataset.
+Use register_available_datasets() to populate dropdowns for dataset selection.
+Visualization:
+
+Users can select visualization types: linear or logarithmic.
+Users can reorder based on persistence or streak length.
+Users can choose between absolute or relative kinetic energy.
+Interactivity:
+
+The histogram plot will allow users to select color bands for dynamic scaling.
+Users can hover or click on the plots to get a zoomed-in view.
+User Management:
+
+Users can register, log in, and log out.
+Only logged-in users can save app states and comments.
+Saving State and Comments:
+
+Users can save a snapshot of the current state.
+Comments can be left, viewed, edited, or deleted.
+Users can load saved states for collaboration.
+Next Steps for Phase 1: Running Locally
+In Phase 1, we will begin implementing the app to run locally using Streamlit. Here’s the breakdown for each step:
+
+Step 1: Set up the basic UI for the app (app.py).
+Step 2: Implement dataset registration and loading (data_handler.py).
+Step 3: Create the authentication system using SQLite (auth.py).
+Step 4: Implement visualization functions (visualization.py).
+Step 5: Add the zoomed-in interactivity.
+Step 6: Add saving states and handling comments (state_manager.py and comments.py).
+For each step, we will implement functions one by one, allowing room for debugging and modifications before moving forward.
