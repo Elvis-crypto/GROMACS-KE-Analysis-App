@@ -1,11 +1,6 @@
 # app.py: Main Application for Kinetic Energy Visualization
 import streamlit as st
-import os
-import glob
-import pandas as pd
-from pathlib import Path
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import numpy as np
 
 # Placeholder imports (functions to be implemented in other modules later)
 from data_handler import register_available_datasets, load_dataset, normalize_per_frame
@@ -25,6 +20,10 @@ def cached_register_available_datasets():
     return register_available_datasets()
 
 def setup_sidebar():
+    def toggle_info_button(info_name):
+        if info_name not in st.session_state:
+            st.session_state[info_name] = False
+        st.session_state[info_name] = not st.session_state[info_name]
 
     def toggle_info_button(info_name):
         if info_name not in st.session_state:
@@ -122,8 +121,16 @@ def setup_sidebar():
         frame_min = st.sidebar.slider("Select Minimum Frame", min_value=0, max_value=200, value=42, step=1, help='The minimum frame, above which, the persistance or streak length will be evaluated.')
         threshold = st.sidebar.slider("Select Threshold Percentile", min_value=0, max_value=100, value=70, step=1, help='The minimum per frame percentile threshold for a frame to be included in the persistence score or streak length calculation for a residue.' )
     
+    if value_type == 'Per Frame Distribution':
+        reference_data = normalize_per_frame(reference_data)
+        comparison_data = normalize_per_frame(comparison_data)
+
     if reordering_option != "Original Order":
         reference_data, comparison_data = reorder_data(reference_data, comparison_data, reordering_option, frame_min=frame_min, threshold=threshold)
+        
+    if calculation_form == 'Logarithmic KE':
+        reference_data = reference_data.applymap(lambda x: np.log10(x) if x > 0 else 0)
+        comparison_data = comparison_data.applymap(lambda x: np.log10(x) if x > 0 else 0)
     
     return reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type
 
