@@ -28,8 +28,8 @@ This project is a **Streamlit** application for visualizing and analyzing GROMAC
 1. Clone the repository:
 
    ```bash
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/Elvis-crypto/GROMACS-KE-Analysis-App
+   cd https://github.com/Elvis-crypto/GROMACS-KE-Analysis-App
    ```
 
 2. Create and activate a virtual environment:
@@ -43,18 +43,6 @@ This project is a **Streamlit** application for visualizing and analyzing GROMAC
    ```bash
    pip install -r requirements.txt
    ```
-
-## Freezing Dependencies
-
-To create a `requirements.txt` file for freezing the dependencies:
-
-1. Make sure your virtual environment is activated.
-2. Install all required packages (`streamlit`, `bcrypt`, etc.) using `pip install`.
-3. Run the following command to generate the `requirements.txt`:
-   ```bash
-   pip freeze > requirements.txt
-   ```
-   This will save the current versions of all installed packages in your virtual environment to `requirements.txt`.
 
 ## Running the App
 
@@ -92,4 +80,4 @@ This project is licensed under the MIT License.
 
 - István Lőrincz
 
-Feel free to reach out for any questions or collaboration!
+Feel free to reach out for any questions or collaboration to lorizoli@gmail.com !
