@@ -111,7 +111,7 @@ def setup_sidebar():
 
     calculation_form = dropdown_w_info(selectbox_text="Select Calculation Form", sbx_options_list=["Linear KE", "Logarithmic KE"], info_message="Select whether to display kinetic energy values linearly or logarithmically.", sbx_type='radio')
      
-    st.session_state['reordering_option'] = reordering_option = dropdown_w_info(selectbox_text="Select Reordering Option", sbx_options_list=["Original Order", "Reordered by Persistence", "Reordered by Streak Length"], info_message="Choose how to reorder residues: keep the original order, reorder by persistence score, or by the longest streak above a percentile threshold. The persistence score represents how consistently a residue remains above a given per-frame percentile across all frames, while streak length measures the longest continuous period a residue exceeds that percentile. Note the appearing sliders below if you choose a reordering option.", sbx_type='radio')
+    st.session_state['reordering_option'] = reordering_option = dropdown_w_info(selectbox_text="Select Reordering Option", sbx_options_list=["Original Order", "Reordered by Persistence", "Reordered by Streak Length", "Reordered by Absolute Persistence"], info_message="Choose how to reorder residues: keep the original order, reorder by persistence score, or by the longest streak above a percentile threshold. The persistence score represents how consistently a residue remains above a given per-frame percentile across all frames, while streak length measures the longest continuous period a residue exceeds that percentile. Note the appearing sliders below if you choose a reordering option.", sbx_type='radio')
     
     value_type = dropdown_w_info(selectbox_text="Select Value Type", sbx_options_list=["Absolute Values", "Per Frame Distribution"], info_message="Choose whether to use absolute kinetic energy values or normalize them per frame for comparison.", sbx_type='radio')
     
@@ -120,14 +120,18 @@ def setup_sidebar():
         st.sidebar.subheader("Reordering Parameters")
         frame_min = st.sidebar.slider("Select Minimum Frame", min_value=0, max_value=200, value=42, step=1, help='The minimum frame, above which, the persistance or streak length will be evaluated.')
         frame_max = st.sidebar.slider("Select Maximum Frame", min_value=0, max_value=200, value=200, step=1, help='The maximum frame, below which, the persistance or streak length will be evaluated.')
-        threshold = st.sidebar.slider("Select Threshold Percentile", min_value=0, max_value=100, value=70, step=1, help='The minimum per frame percentile threshold for a frame to be included in the persistence score or streak length calculation for a residue.' )
+        if reordering_option != "Reordered by Absolute Persistence":
+            threshold = st.sidebar.slider("Select Threshold Percentile", min_value=0, max_value=100, value=70, step=1, help='The minimum per frame percentile threshold for a frame to be included in the persistence score or streak length calculation for a residue.' )
     
     if value_type == 'Per Frame Distribution':
         reference_data = normalize_per_frame(reference_data)
         comparison_data = normalize_per_frame(comparison_data)
 
     if reordering_option != "Original Order":
-        reference_data, comparison_data = reorder_data(reference_data, comparison_data, reordering_option, frame_min=frame_min, frame_max=frame_max, threshold=threshold)
+        if reordering_option != "Reordered by Absolute Persistence":
+            reference_data, comparison_data = reorder_data(reference_data, comparison_data, reordering_option, frame_min=frame_min, frame_max=frame_max, threshold=threshold)
+        else:
+            reference_data, comparison_data = reorder_data(reference_data, comparison_data, reordering_option, frame_min=frame_min, frame_max=frame_max, threshold=70)
         
     if calculation_form == 'Logarithmic KE':
         reference_data = reference_data.applymap(lambda x: np.log10(x) if x > 0 else 0)

@@ -67,6 +67,29 @@ def calculate_persistence_score(df, frame_min, frame_max, threshold):
     persistence_scores = above_threshold.mean(axis=1)
     return persistence_scores
 
+def calculate_absolute_persistence_score(df, frame_min, frame_max):
+    """
+    Calculate the persistence score for each residue, based on the proportion of frames where KE is above a threshold.
+    
+    :param df: The pivot table of KE values (residues x frames).
+    :param frame_min: The minimum frame to consider for persistence detection.
+    :param threshold: The threshold (percentile) above which we consider values for persistence detection.
+    :return: A Series with the persistence score for each residue.
+
+    Args:
+        reference_pivot (pd.DataFrame): The pivot table for the reference run.
+        frame_min (int): The minimum frame to consider.
+        threshold (float): The threshold value to calculate persistence.
+
+    Returns:
+        pd.Series: Persistence scores for each residue.
+    """
+    # Focus on the region of interest (frames >= frame_min)
+    df_region = df.loc[:, (df.columns >= frame_min) & (df.columns <= frame_max)]
+    
+    # Calculate the persistence score (proportion of frames above the threshold for each residue)
+    persistence_scores = df_region.mean(axis=1)
+    return persistence_scores
 
 def detect_longest_streak(df, frame_min, frame_max, threshold):
     """
@@ -110,6 +133,9 @@ def reorder_data(reference_pivot, comparison_pivot, reordering_option, frame_min
     elif reordering_option == "Reordered by Streak Length":
         streak_lengths = detect_longest_streak(reference_pivot, frame_min, frame_max, threshold)
         final_rank = streak_lengths.rank(method='dense', ascending=False)
+    elif reordering_option == "Reordered by Absolute Persistence":
+        absolute_persistence_score = calculate_absolute_persistence_score(reference_pivot, frame_min, frame_max)
+        final_rank = absolute_persistence_score.rank(method='dense', ascending=False)
     else:
         raise ValueError("Unhandled reordering option was passed")
     
