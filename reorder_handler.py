@@ -37,7 +37,7 @@ def calculate_reordering(reference_pivot, primary_range, secondary_range):
 
 # Function to calculate persistence scores and streak lengths for reordering
 
-def calculate_persistence_score(df, frame_min, threshold):
+def calculate_persistence_score(df, frame_min, frame_max, threshold):
     """
     Calculate the persistence score for each residue, based on the proportion of frames where KE is above a threshold.
     
@@ -55,7 +55,7 @@ def calculate_persistence_score(df, frame_min, threshold):
         pd.Series: Persistence scores for each residue.
     """
     # Focus on the region of interest (frames >= frame_min)
-    df_region = df.loc[:, df.columns >= frame_min]
+    df_region = df.loc[:, (df.columns >= frame_min) & (df.columns <= frame_max)]
     
     # Calculate the threshold value based on the provided percentile
     threshold_value = np.percentile(df_region.values, threshold)
@@ -68,7 +68,7 @@ def calculate_persistence_score(df, frame_min, threshold):
     return persistence_scores
 
 
-def detect_longest_streak(df, frame_min, threshold):
+def detect_longest_streak(df, frame_min, frame_max, threshold):
     """
     Detect the longest streak (consecutive frames) of kinetic energy above a given threshold for each residue.
     
@@ -78,7 +78,7 @@ def detect_longest_streak(df, frame_min, threshold):
     :return: A Series with the longest streak length for each residue.
     """
     # Focus on the region of interest (frames >= frame_min)
-    df_region = df.loc[:, df.columns >= frame_min]
+    df_region = df.loc[:, (df.columns >= frame_min) & (df.columns <= frame_max)]
     
     # Calculate the threshold value based on the provided percentile
     threshold_value = np.percentile(df_region.values, threshold)
@@ -92,7 +92,7 @@ def detect_longest_streak(df, frame_min, threshold):
     return streak_lengths
 
 # Function to apply reordered indices to reference and comparison datasets
-def reorder_data(reference_pivot, comparison_pivot, reordering_option, frame_min, threshold):
+def reorder_data(reference_pivot, comparison_pivot, reordering_option, frame_min, frame_max, threshold):
     """
     Reorders the reference and comparison pivot tables based on the given indices.
 
@@ -105,10 +105,10 @@ def reorder_data(reference_pivot, comparison_pivot, reordering_option, frame_min
         tuple: Reordered reference and comparison pivot tables.
     """
     if reordering_option == "Reordered by Persistence":
-        persistence_scores = calculate_persistence_score(reference_pivot, frame_min=frame_min, threshold=threshold)
+        persistence_scores = calculate_persistence_score(reference_pivot, frame_min=frame_min, frame_max=frame_max, threshold=threshold)
         final_rank = persistence_scores.rank(method='dense', ascending=False)
     elif reordering_option == "Reordered by Streak Length":
-        streak_lengths = detect_longest_streak(reference_pivot, frame_min, threshold)
+        streak_lengths = detect_longest_streak(reference_pivot, frame_min, frame_max, threshold)
         final_rank = streak_lengths.rank(method='dense', ascending=False)
     else:
         raise ValueError("Unhandled reordering option was passed")

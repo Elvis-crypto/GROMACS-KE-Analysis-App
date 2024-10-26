@@ -119,6 +119,7 @@ def setup_sidebar():
     if reordering_option != "Original Order":
         st.sidebar.subheader("Reordering Parameters")
         frame_min = st.sidebar.slider("Select Minimum Frame", min_value=0, max_value=200, value=42, step=1, help='The minimum frame, above which, the persistance or streak length will be evaluated.')
+        frame_max = st.sidebar.slider("Select Maximum Frame", min_value=0, max_value=200, value=200, step=1, help='The maximum frame, below which, the persistance or streak length will be evaluated.')
         threshold = st.sidebar.slider("Select Threshold Percentile", min_value=0, max_value=100, value=70, step=1, help='The minimum per frame percentile threshold for a frame to be included in the persistence score or streak length calculation for a residue.' )
     
     if value_type == 'Per Frame Distribution':
@@ -126,7 +127,7 @@ def setup_sidebar():
         comparison_data = normalize_per_frame(comparison_data)
 
     if reordering_option != "Original Order":
-        reference_data, comparison_data = reorder_data(reference_data, comparison_data, reordering_option, frame_min=frame_min, threshold=threshold)
+        reference_data, comparison_data = reorder_data(reference_data, comparison_data, reordering_option, frame_min=frame_min, frame_max=frame_max, threshold=threshold)
         
     if calculation_form == 'Logarithmic KE':
         reference_data = reference_data.applymap(lambda x: np.log10(x) if x > 0 else 0)
