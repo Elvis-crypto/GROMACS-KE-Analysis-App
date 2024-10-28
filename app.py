@@ -1,6 +1,7 @@
 # app.py: Main Application for Kinetic Energy Visualization
 import streamlit as st
 import numpy as np
+from PIL import Image
 
 # Placeholder imports (functions to be implemented in other modules later)
 from data_handler import register_available_datasets, load_dataset, normalize_per_frame
@@ -9,7 +10,7 @@ from reorder_handler import reorder_data
 
 # Setting up Streamlit page config
 st.set_page_config(page_title="Kinetic Energy Visualization App", layout="wide")
-
+logo = Image.open("icons/no_bg.png")
 # Sidebar setup for dataset selection and login
 
 def is_logged_in():
@@ -51,9 +52,13 @@ def setup_sidebar():
         if st.session_state[info_name]:
             st.sidebar.write(info_message)
         return attribute
-
+    
+    col1, col2 = st.sidebar.columns(2, gap='medium', vertical_alignment='center')
+    with col1:
+        st.image(logo, width=150)
     # Title
-    st.sidebar.title("Kinetic Energy Analysis")
+    with col2:
+        st.title("GROMACS Pulsed MD Kinetic Energy Analysis")
     
     # User Authentication (Placeholder UI)
     if not is_logged_in():

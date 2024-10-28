@@ -87,7 +87,6 @@ def calculate_absolute_persistence_score(df, frame_min, frame_max):
     # Focus on the region of interest (frames >= frame_min)
     df_region = df.loc[:, (df.columns >= frame_min) & (df.columns <= frame_max)]
     
-    # Calculate the persistence score (proportion of frames above the threshold for each residue)
     persistence_scores = df_region.mean(axis=1)
     return persistence_scores
 
