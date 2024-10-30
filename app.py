@@ -9,7 +9,7 @@ from visualization import plot_histogram, render_heatmaps
 from reorder_handler import reorder_data
 
 # Setting up Streamlit page config
-st.set_page_config(page_title="Kinetic Energy Visualization App", layout="wide")
+st.set_page_config(page_title="Kinetic Energy Visualization App", layout="wide", page_icon="favicon.ico")
 logo = Image.open("icons/no_bg.png")
 # Sidebar setup for dataset selection and login
 
@@ -53,9 +53,9 @@ def setup_sidebar():
             st.sidebar.write(info_message)
         return attribute
     
-    col1, col2 = st.sidebar.columns(2, gap='medium', vertical_alignment='center')
+    col1, col2 = st.sidebar.columns(2, gap='medium', vertical_alignment='bottom')
     with col1:
-        st.image(logo, width=150)
+        st.image(logo, width=140)
     # Title
     with col2:
         st.title("GROMACS Pulsed MD Kinetic Energy Analysis")
@@ -118,7 +118,7 @@ def setup_sidebar():
      
     st.session_state['reordering_option'] = reordering_option = dropdown_w_info(selectbox_text="Select Reordering Option", sbx_options_list=["Original Order", "Reordered by Persistence", "Reordered by Streak Length", "Reordered by Absolute Persistence"], info_message="Choose how to reorder residues: keep the original order, reorder by persistence score, or by the longest streak above a percentile threshold. The persistence score represents how consistently a residue remains above a given per-frame percentile across all frames, while streak length measures the longest continuous period a residue exceeds that percentile. Note the appearing sliders below if you choose a reordering option.", sbx_type='radio')
     
-    value_type = dropdown_w_info(selectbox_text="Select Value Type", sbx_options_list=["Absolute Values", "Per Frame Distribution"], info_message="Choose whether to use absolute kinetic energy values or normalize them per frame for comparison.", sbx_type='radio')
+    st.session_state['value_type'] = value_type = dropdown_w_info(selectbox_text="Select Value Type", sbx_options_list=["Absolute Values", "Per Frame Distribution"], info_message="Choose whether to use absolute kinetic energy values or normalize them per frame for comparison.", sbx_type='radio')
     
     # Add sliders for adjusting reordering thresholds
     if reordering_option != "Original Order":
