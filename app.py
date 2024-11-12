@@ -233,8 +233,8 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
     topology = None
     molecule_1_url = f'./trajectories/pdb/{reference_category}/traj_{reference_run}.pdb'
     molecule_2_url = f'./trajectories/pdb/{comparison_category}/traj_{comparison_run}.pdb'
-    # molecule_2_url = molecule_1_url = f'Calmod_sample.pdb'
-    molecule_2_url = molecule_1_url = f'1crn.pdb'
+    # molecule_2_url = molecule_1_url = "https://github.com/Elvis-crypto/GROMACS-KE-Analysis-App/blob/main/Calmod_sample.pdb"
+    molecule_2_url = molecule_1_url = "https://github.com/Elvis-crypto/GROMACS-KE-Analysis-App/tree/main/1CRN.pdb"
     # topology = 'topologies/no_water.top'
     # molecule_1_url = f'trajectories/trr/{reference_category}/traj_{reference_run}.trr'
     # molecule_2_url = f'trajectories/trr/{comparison_category}/traj_{comparison_run}.trr'
