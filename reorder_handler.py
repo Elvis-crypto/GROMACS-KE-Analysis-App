@@ -113,6 +113,99 @@ def detect_longest_streak(df, frame_min, frame_max, threshold):
     
     return streak_lengths
 
+def get_KE_ordered_index(pivot, frame_min, frame_max):
+    index_order = calculate_absolute_persistence_score(pivot, frame_min, frame_max).rank(method='dense', ascending=False).sort_values().index
+    return index_order
+
+def construct_KE_pairs(reference_pivot, comparison_pivot, step_res, KE_prc_threshold, resolution):
+    threshold_num = int(np.floor(len(reference_pivot) * KE_prc_threshold))
+    result = pd.DataFrame(columns=[
+        'bin_frame_start', 'bin_frame_stop', 'bin_frame_mid', 
+        'reference_top_index', 'comparison_top_index'
+    ])
+    col_len = len(reference_pivot.columns)
+    start_frame = 0
+    stop_frame = step_res
+    
+    while stop_frame <= col_len:
+        mid_frame = start_frame + int(np.ceil(step_res / 2))
+        
+        ref_indices = get_KE_ordered_index(reference_pivot, start_frame, stop_frame)[-threshold_num:]
+        comp_indices = get_KE_ordered_index(comparison_pivot, start_frame, stop_frame)[-threshold_num:]
+        
+        # Create a new DataFrame row
+        new_df = pd.DataFrame(columns=[
+        'bin_frame_start', 'bin_frame_stop', 'bin_frame_mid', 
+        'reference_top_index', 'comparison_top_index'
+        ])
+        new_df['reference_top_index'] = ref_indices
+        new_df['comparison_top_index'] = comp_indices
+        new_df['bin_frame_start'] = start_frame
+        new_df['bin_frame_stop'] = stop_frame
+        new_df['bin_frame_mid'] = mid_frame
+                
+        result = pd.concat([result, new_df], ignore_index=True)
+        
+        start_frame += step_res
+        stop_frame += step_res
+
+    # Load the CSV file back into a DataFrame for mapping
+    aa_map = pd.read_csv('aa_map.csv')
+    
+    if resolution == 'atom':
+        result = result.merge(aa_map, how='left', left_on='reference_top_index', right_on='atom_number',suffixes=(None, "_reference")).drop(columns=['reference_top_index'])
+        result.rename(columns={'atom_name':'atom_name_reference', 'atom_number':'atom_number_reference', 'residue_number':'residue_number_reference', 'residue_three_letter':'residue_three_letter_reference'}, inplace=True)
+        result = result.merge(aa_map, how='left', left_on='comparison_top_index', right_on='atom_number',suffixes=(None, "_comparison")).drop(columns=['comparison_top_index'])
+        result.rename(columns={'atom_name':'atom_name_comparison', 'atom_number':'atom_number_comparison', 'residue_number':'residue_number_comparison', 'residue_three_letter':'residue_three_letter_comparison'}, inplace=True)
+    elif resolution == 'residue':
+        result = result.merge(aa_map[['residue_number', 'residue_three_letter']].drop_duplicates(), how='left', left_on='reference_top_index', right_on='residue_number',suffixes=(None, "_reference")).drop(columns=['reference_top_index'])
+        result.rename(columns={'residue_number':'residue_number_reference', 'residue_three_letter':'residue_three_letter_reference'}, inplace=True)
+        result = result.merge(aa_map[['residue_number', 'residue_three_letter']].drop_duplicates(), how='left', left_on='comparison_top_index', right_on='residue_number',suffixes=(None, "_comparison")).drop(columns=['comparison_top_index'])
+        result.rename(columns={'residue_number':'residue_number_comparison', 'residue_three_letter':'residue_three_letter_comparison'}, inplace=True)
+    else:
+        raise ValueError("Invalid resolution. Choose 'atom' or 'residue'.")
+
+    return result
+
+def add_residue_category(result_df):
+    # Create a set of residue numbers for reference and comparison by frame
+    frame_residue_groups = (
+        result_df.groupby(['bin_frame_mid', 'residue_number_reference', 'residue_number_comparison'])
+        .apply(lambda x: set(x['residue_number_reference']).union(set(x['residue_number_comparison'])))
+        .reset_index()
+    )
+
+    # Initialize the category column
+    result_df['category_ref'] = 'Unclassified'
+    result_df['category_comp'] = 'Unclassified'
+
+    # Iterate over frames and assign categories
+    for frame, frame_data in result_df.groupby('bin_frame_mid'):
+        ref_residues = set(frame_data['residue_number_reference'].dropna())
+        comp_residues = set(frame_data['residue_number_comparison'].dropna())
+
+        # Assign categories based on conditions
+        for index, row in frame_data.iterrows():
+            residue_num_ref = row['residue_number_reference']
+            residue_num_comp = row['residue_number_comparison']
+
+            if pd.notna(residue_num_ref):
+                if residue_num_ref in comp_residues:
+                    result_df.at[index, 'category_ref'] = 'common'
+                elif residue_num_ref - 1 in comp_residues or residue_num_ref + 1 in comp_residues:
+                    result_df.at[index, 'category_ref'] = 'neighbour'
+                else:
+                    result_df.at[index, 'category_ref'] = 'reference only'
+            if pd.notna(residue_num_comp):
+                if residue_num_comp in ref_residues:
+                    result_df.at[index, 'category_comp'] = 'common'
+                elif residue_num_comp - 1 in ref_residues or residue_num_comp + 1 in ref_residues:
+                    result_df.at[index, 'category_comp'] = 'neighbour'
+                else:
+                    result_df.at[index, 'category_comp'] = 'comparison only'
+
+    return result_df
+
 # Function to apply reordered indices to reference and comparison datasets
 def reorder_data(reference_pivot, comparison_pivot, reordering_option, frame_min, frame_max, threshold):
     """

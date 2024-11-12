@@ -1,12 +1,14 @@
 # app.py: Main Application for Kinetic Energy Visualization
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 from PIL import Image
 
 # Placeholder imports (functions to be implemented in other modules later)
 from data_handler import register_available_datasets, load_dataset, normalize_per_frame
-from visualization import plot_histogram, render_heatmaps
-from reorder_handler import reorder_data
+from visualization import plot_histogram, render_heatmaps, plot_aa_distribution_by_frame_mid, plot_residue_category_distribution, show_frame_details
+from reorder_handler import reorder_data, construct_KE_pairs, add_residue_category
+from molvis import generate_ngl_viewer_html
 
 # Setting up Streamlit page config
 st.set_page_config(page_title="Kinetic Energy Visualization App", layout="wide", page_icon="favicon.ico")
@@ -128,9 +130,11 @@ def setup_sidebar():
         if reordering_option != "Reordered by Absolute Persistence":
             threshold = st.sidebar.slider("Select Threshold Percentile", min_value=0, max_value=100, value=70, step=1, help='The minimum per frame percentile threshold for a frame to be included in the persistence score or streak length calculation for a residue.' )
     
+    norm_reference_data = normalize_per_frame(reference_data)
+    norm_comparison_data = normalize_per_frame(comparison_data)
     if value_type == 'Per Frame Distribution':
-        reference_data = normalize_per_frame(reference_data)
-        comparison_data = normalize_per_frame(comparison_data)
+        reference_data = norm_reference_data
+        comparison_data = norm_comparison_data
 
     if reordering_option != "Original Order":
         if reordering_option != "Reordered by Absolute Persistence":
@@ -142,7 +146,7 @@ def setup_sidebar():
         reference_data = reference_data.applymap(lambda x: np.log10(x) if x > 0 else 0)
         comparison_data = comparison_data.applymap(lambda x: np.log10(x) if x > 0 else 0)
     
-    return reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type
+    return reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type, norm_reference_data, norm_comparison_data, reference_run, comparison_run
 
 
 # Function to render interactive range panels for histogram and heatmap syncing
@@ -200,7 +204,7 @@ def render_range_panels(col4):
         st.button("Update Plots and Ranges", key="update_plots_button", on_click=ranges_updated)
 
 # Main visualization area
-def render_visualization(reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type):
+def render_visualization(reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type, norm_reference_data, norm_comparison_data, KE_prc_threshold, reference_run, comparison_run):
     if reference_data is None or comparison_data is None:
         st.write("Error: Please select valid datasets for both the reference and comparison runs to visualize the results.")
         return
@@ -215,10 +219,94 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
     # heatmap_placeholder = col1.empty()
 
     # Render histogram with interactive vertical range indicators
-    st.write("#### Histogram of Values")
+    st.write("### Histogram of Values")
     col3, col4 = st.columns(2)
     histogram_placeholder = col3.empty()
+    st.write("## Select one of the bars in charts below to see detailed info on the range.") 
+    st.write("### Selection in the left graph takes precedence over right if both contain selections.")
+    col6, col7 = st.columns(2)
+    table1 = st.columns(1)[0]
+    col8, col9, col10 = st.columns([2,3,1])
+    # Render Pymol visualizations
+    col5 = st.columns(1)[0]
 
+    topology = None
+    molecule_1_url = f'./trajectories/pdb/{reference_category}/traj_{reference_run}.pdb'
+    molecule_2_url = f'./trajectories/pdb/{comparison_category}/traj_{comparison_run}.pdb'
+    # molecule_2_url = molecule_1_url = f'Calmod_sample.pdb'
+    molecule_2_url = molecule_1_url = f'1crn.pdb'
+    # topology = 'topologies/no_water.top'
+    # molecule_1_url = f'trajectories/trr/{reference_category}/traj_{reference_run}.trr'
+    # molecule_2_url = f'trajectories/trr/{comparison_category}/traj_{comparison_run}.trr'
+    
+    # We will estabilish the html code for the Pymol window here. Maybe move to a function later
+    # URLs or file paths for the molecules in .pdb format
+    # molecule_1_url = "https://files.rcsb.org/download/1CRN.pdb"  # Replace with your molecule URL or path
+    # molecule_2_url = "https://files.rcsb.org/download/2B5C.pdb"  # Replace with your molecule URL or path
+
+    # HTML code for NGL Viewer with grid view, DSS, and alignment setup
+    html_code = f"""
+        <div style="display: flex;">
+            <div id="viewport1" style="width: 50%; height: 500px;"></div>
+            <div id="viewport2" style="width: 50%; height: 500px;"></div>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/ngl/2.0.0-dev.29/ngl.js"></script>
+        <script>
+            // Initialize two separate NGL Stages
+            const stage1 = new NGL.Stage("viewport1");
+            const stage2 = new NGL.Stage("viewport2");
+
+            // Load first molecule into stage1
+            stage1.loadFile("{molecule_1_url}").then(o => {{
+                o.addRepresentation("cartoon", {{ color: "skyblue" }});
+                stage1.autoView();
+            }});
+
+            // Load second molecule into stage2
+            stage2.loadFile("{molecule_2_url}").then(o => {{
+                o.addRepresentation("cartoon", {{ color: "tomato" }});
+                stage2.autoView();
+            }});
+
+            // Flags for tracking mouse movements in each stage
+            let mouseMovingStage1 = false;
+            let mouseMovingStage2 = false;
+
+            // Event listeners for mouse events for stage1
+            document.getElementById("viewport1").addEventListener("mousedown", () => mouseMovingStage1 = true);
+            document.getElementById("viewport1").addEventListener("mouseup", () => mouseMovingStage1 = false);
+
+            // Event listeners for mouse events for stage2
+            document.getElementById("viewport2").addEventListener("mousedown", () => mouseMovingStage2 = true);
+            document.getElementById("viewport2").addEventListener("mouseup", () => mouseMovingStage2 = false);
+
+            // Continuous synchronization loop to ensure alignment between stages
+            function syncStages() {{
+                // Sync the stages based on mouse movement
+                if (!mouseMovingStage1) {{
+                    // Get the camera parameters from stage2 and apply to stage1
+                    stage1.viewerControls.orient(stage2.viewerControls.getOrientation());
+                    stage1.viewer.requestRender();
+                }}
+
+                if (!mouseMovingStage2) {{
+                    // Get the camera parameters from stage1 and apply to stage2
+                    stage2.viewerControls.orient(stage1.viewerControls.getOrientation());
+                    stage2.viewer.requestRender();
+                }}
+
+                // Request the next frame for sync
+                requestAnimationFrame(syncStages);
+            }}
+
+            // Start the synchronization loop
+            syncStages();
+        </script>
+    """
+
+    KE_pairs = construct_KE_pairs(norm_reference_data, norm_comparison_data, step_res=5, KE_prc_threshold=KE_prc_threshold, resolution=resolution)
+    KE_pairs = add_residue_category(KE_pairs)
+    
     # Render range panels for histogram and heatmap syncing in col4
     render_range_panels(col4)
     if st.session_state.get('ranges_updated', False):
@@ -229,6 +317,28 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
     
     with col1:
         render_heatmaps(reference_data, comparison_data)
+
+    with col6:
+        clicked_bin_frame_mid1 = plot_aa_distribution_by_frame_mid(KE_pairs, KE_prc_threshold)
+    with col7:
+        clicked_bin_frame_mid2 = plot_residue_category_distribution(KE_pairs)
+    
+    with table1:
+        st.write(KE_pairs)
+
+    if clicked_bin_frame_mid1:
+        clicked_bin_frame_mid = clicked_bin_frame_mid1
+    elif clicked_bin_frame_mid2:
+        clicked_bin_frame_mid = clicked_bin_frame_mid2
+    else:
+        clicked_bin_frame_mid = None
+    if clicked_bin_frame_mid:
+        show_frame_details(KE_pairs, clicked_bin_frame_mid, col8, col9, col10)
+        
+        # html_code = generate_ngl_viewer_html(clicked_bin_frame_mid, molecule_1_url, molecule_2_url, KE_pairs, topo_file_1=topology, topo_file_2=topology)
+        with col5:
+            st.write(molecule_1_url)
+            components.html(html_code, height=600)
         
 
 
@@ -237,10 +347,10 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
 def main():
     if 'active_ranges' not in st.session_state:
         st.session_state['active_ranges'] = []
-    reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type = setup_sidebar()
+    reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type, norm_reference_data, norm_comparison_data, reference_run, comparison_run = setup_sidebar()
     
     # Render visualizations
-    render_visualization(reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type)
+    render_visualization(reference_data, comparison_data, resolution, reference_category, comparison_category, calculation_form, reordering_option, value_type, norm_reference_data, norm_comparison_data, KE_prc_threshold=0.1,  reference_run=reference_run, comparison_run=comparison_run)
         
 
 if __name__ == "__main__":
