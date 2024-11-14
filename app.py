@@ -230,7 +230,8 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
     # Render Pymol visualizations
     col5 = st.columns(1)[0]
 
-    KE_pairs = construct_KE_pairs(norm_reference_data, norm_comparison_data, step_res=5, KE_prc_threshold=KE_prc_threshold, resolution=resolution)
+    step_res = 5 #<---  Bad practice, should be interactive
+    KE_pairs = construct_KE_pairs(norm_reference_data, norm_comparison_data, step_res=step_res, KE_prc_threshold=KE_prc_threshold, resolution=resolution)
     KE_pairs = add_residue_category(KE_pairs)
     
     # Render range panels for histogram and heatmap syncing in col4
@@ -259,16 +260,47 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
     else:
         clicked_bin_frame_mid = None
     if clicked_bin_frame_mid:
-        show_frame_details(KE_pairs, clicked_bin_frame_mid, col8, col9, col10)
+        prev_clicked_frame = st.session_state.get('prev_clicked_frame', None)
+        if prev_clicked_frame != clicked_bin_frame_mid:
+            prev_clicked_frame = st.session_state['prev_clicked_frame'] = clicked_bin_frame_mid
+            act_cent_frame = st.session_state['act_cent_frame'] = clicked_bin_frame_mid
+        else:
+            act_cent_frame = st.session_state['act_cent_frame']
+        frame_start, frame_stop = show_frame_details(KE_pairs, act_cent_frame, col8, col9, col10)
         with col5:
-            subcol1, subcol2, subcol_ = st.columns([2,1,2])
+            subcol1, prev_b_place, frame_plc, next_b_place, subcol_ = st.columns([8,2,1,2,6], vertical_alignment='bottom')
             with subcol1:
-                video_sel = st.radio("Show 'real' frame or starting frame for structure", ['Starting frame (fast)', 'Real frame (loads for 5 sec)'], index=0, help='To load the middle frame of the selected bin, select the second option. This loads the entire trajectory for both simulations and will take a while. The first option shows the structural highlights on the starting frame', horizontal=True)
+                video_sel = st.radio("Show 'real' frame or starting frame for structure", ['Starting frame (fast)', 'Real frame (loads for 5 sec)'], index=1, help='To load the middle frame of the selected bin, select the second option. This loads the entire trajectory for both simulations and will take a while. The first option shows the structural highlights on the starting frame', horizontal=True)
             if video_sel == 'Starting frame (fast)':
                 molecule_2_url = molecule_1_url = "Calmod_sample.pdb"
             else:
                 molecule_1_url = f'./trajectories/pdb/{reference_category}/traj_{reference_run}.pdb'
                 molecule_2_url = f'./trajectories/pdb/{comparison_category}/traj_{comparison_run}.pdb'
+                # Place navigation buttons
+                # Define the step size and boundary conditions
+                col_len = len(norm_reference_data.columns)
+
+                # Check bounds for "Prev Bin" button visibility
+                if clicked_bin_frame_mid - step_res >= 0:
+                    with prev_b_place:
+                        prev_clicked = st.button("< Prev Bin")
+                else:
+                    prev_clicked = False
+                
+                with frame_plc:
+                    st.write(f"{frame_start} - {frame_stop}")
+                # Check bounds for "Next Bin" button visibility
+                if clicked_bin_frame_mid + step_res <= col_len:
+                    with next_b_place:
+                        next_clicked = st.button("Next Bin >")
+                else:
+                    next_clicked = False
+
+                # Update clicked_bin_frame_mid based on button clicks
+                if prev_clicked:
+                    st.session_state['act_cent_frame'] -= step_res
+                elif next_clicked:
+                    st.session_state['act_cent_frame'] += step_res
             html_code = generate_ngl_viewer_html(clicked_bin_frame_mid, molecule_1_url, molecule_2_url, KE_pairs)
             components.html(html_code, height=600)
         

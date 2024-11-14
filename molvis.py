@@ -14,13 +14,17 @@ def generate_pdb_base64_frame(pdb_file_path, frame_number=0):
     Read a local PDB file, extract a specific frame (MODEL), 
     and return it as a base64-encoded string along with the geometric center.
     """
-    parser = PDB.PDBParser(QUIET=True)
-    structure = parser.get_structure("molecule", pdb_file_path)
+    if st.session_state.get(pdb_file_path, None):
+        model = st.session_state[pdb_file_path]
+    else:
+        parser = PDB.PDBParser(QUIET=True)
+        structure = parser.get_structure("molecule", pdb_file_path)
 
-    try:
-        model = structure[frame_number]
-    except KeyError:
-        model = structure[0]
+        try:
+            model = structure[frame_number]
+        except KeyError:
+            model = structure[0]
+        st.session_state[pdb_file_path] = model
 
     # Calculate geometric center
     atom_coords = [atom.coord for atom in model.get_atoms()]
@@ -93,7 +97,10 @@ def generate_ngl_viewer_html(frame_number, molecule_1_path, molecule_2_path, res
         <div id="viewport1" style="width: 50%; height: 500px;"></div>
         <div id="viewport2" style="width: 50%; height: 500px;"></div>
     </div>
-    <button id="snapshotButton" style="margin-top: 10px;">Save Snapshot</button>
+    <div style="margin-top: 10px;">
+        <button id="snapshotButton">Save Snapshot</button>
+        <button id="resetViewButton">Reset View</button>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ngl/2.0.0-dev.29/ngl.js"></script>
     <script>
         const stage1 = new NGL.Stage("viewport1");
@@ -102,6 +109,7 @@ def generate_ngl_viewer_html(frame_number, molecule_1_path, molecule_2_path, res
         // Load molecules into stage1 and stage2 as Blobs
         {load_molecule_1}
         {load_molecule_2}
+        const standardOrientation = stage1.viewerControls.getOrientation()
 
         // Sync camera orientations between stages
         let mouseMovingStage1 = false;
@@ -166,6 +174,14 @@ def generate_ngl_viewer_html(frame_number, molecule_1_path, molecule_2_path, res
                 img2.src = URL.createObjectURL(blob2);
             }};
             img1.src = URL.createObjectURL(blob1);
+        }});
+
+        // Reset View functionality
+        document.getElementById("resetViewButton").addEventListener("click", () => {{
+            stage1.viewerControls.orient(standardOrientation)
+            stage2.viewerControls.orient(standardOrientation)
+            stage1.autoView();  // Reset view for stage1
+            stage2.autoView();  // Reset view for stage2
         }});
     </script>
     """

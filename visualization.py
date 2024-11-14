@@ -296,3 +296,5 @@ def show_frame_details(result_df, selected_frame, col1, col2, col3):
     fig_cat.update_layout(showlegend=False)  # Hide legend to save space
 
     col3.plotly_chart(fig_cat, use_container_width=True)
+
+    return frame_start, frame_stop
