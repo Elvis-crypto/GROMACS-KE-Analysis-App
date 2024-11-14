@@ -230,80 +230,6 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
     # Render Pymol visualizations
     col5 = st.columns(1)[0]
 
-    topology = None
-    molecule_1_url = f'./trajectories/pdb/{reference_category}/traj_{reference_run}.pdb'
-    molecule_2_url = f'./trajectories/pdb/{comparison_category}/traj_{comparison_run}.pdb'
-    # molecule_2_url = molecule_1_url = "https://github.com/Elvis-crypto/GROMACS-KE-Analysis-App/blob/main/Calmod_sample.pdb"
-    molecule_2_url = molecule_1_url = "https://github.com/Elvis-crypto/GROMACS-KE-Analysis-App/tree/main/1CRN.pdb"
-    # topology = 'topologies/no_water.top'
-    # molecule_1_url = f'trajectories/trr/{reference_category}/traj_{reference_run}.trr'
-    # molecule_2_url = f'trajectories/trr/{comparison_category}/traj_{comparison_run}.trr'
-    
-    # We will estabilish the html code for the Pymol window here. Maybe move to a function later
-    # URLs or file paths for the molecules in .pdb format
-    # molecule_1_url = "https://files.rcsb.org/download/1CRN.pdb"  # Replace with your molecule URL or path
-    # molecule_2_url = "https://files.rcsb.org/download/2B5C.pdb"  # Replace with your molecule URL or path
-
-    # HTML code for NGL Viewer with grid view, DSS, and alignment setup
-    html_code = f"""
-        <div style="display: flex;">
-            <div id="viewport1" style="width: 50%; height: 500px;"></div>
-            <div id="viewport2" style="width: 50%; height: 500px;"></div>
-        </div>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ngl/2.0.0-dev.29/ngl.js"></script>
-        <script>
-            // Initialize two separate NGL Stages
-            const stage1 = new NGL.Stage("viewport1");
-            const stage2 = new NGL.Stage("viewport2");
-
-            // Load first molecule into stage1
-            stage1.loadFile("{molecule_1_url}").then(o => {{
-                o.addRepresentation("cartoon", {{ color: "skyblue" }});
-                stage1.autoView();
-            }});
-
-            // Load second molecule into stage2
-            stage2.loadFile("{molecule_2_url}").then(o => {{
-                o.addRepresentation("cartoon", {{ color: "tomato" }});
-                stage2.autoView();
-            }});
-
-            // Flags for tracking mouse movements in each stage
-            let mouseMovingStage1 = false;
-            let mouseMovingStage2 = false;
-
-            // Event listeners for mouse events for stage1
-            document.getElementById("viewport1").addEventListener("mousedown", () => mouseMovingStage1 = true);
-            document.getElementById("viewport1").addEventListener("mouseup", () => mouseMovingStage1 = false);
-
-            // Event listeners for mouse events for stage2
-            document.getElementById("viewport2").addEventListener("mousedown", () => mouseMovingStage2 = true);
-            document.getElementById("viewport2").addEventListener("mouseup", () => mouseMovingStage2 = false);
-
-            // Continuous synchronization loop to ensure alignment between stages
-            function syncStages() {{
-                // Sync the stages based on mouse movement
-                if (!mouseMovingStage1) {{
-                    // Get the camera parameters from stage2 and apply to stage1
-                    stage1.viewerControls.orient(stage2.viewerControls.getOrientation());
-                    stage1.viewer.requestRender();
-                }}
-
-                if (!mouseMovingStage2) {{
-                    // Get the camera parameters from stage1 and apply to stage2
-                    stage2.viewerControls.orient(stage1.viewerControls.getOrientation());
-                    stage2.viewer.requestRender();
-                }}
-
-                // Request the next frame for sync
-                requestAnimationFrame(syncStages);
-            }}
-
-            // Start the synchronization loop
-            syncStages();
-        </script>
-    """
-
     KE_pairs = construct_KE_pairs(norm_reference_data, norm_comparison_data, step_res=5, KE_prc_threshold=KE_prc_threshold, resolution=resolution)
     KE_pairs = add_residue_category(KE_pairs)
     
@@ -334,10 +260,16 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
         clicked_bin_frame_mid = None
     if clicked_bin_frame_mid:
         show_frame_details(KE_pairs, clicked_bin_frame_mid, col8, col9, col10)
-        
-        # html_code = generate_ngl_viewer_html(clicked_bin_frame_mid, molecule_1_url, molecule_2_url, KE_pairs, topo_file_1=topology, topo_file_2=topology)
         with col5:
-            st.write(molecule_1_url)
+            subcol1, subcol2, subcol_ = st.columns([2,1,2])
+            with subcol1:
+                video_sel = st.radio("Show 'real' frame or starting frame for structure", ['Starting frame (fast)', 'Real frame (loads for 5 sec)'], index=0, help='To load the middle frame of the selected bin, select the second option. This loads the entire trajectory for both simulations and will take a while. The first option shows the structural highlights on the starting frame', horizontal=True)
+            if video_sel == 'Starting frame (fast)':
+                molecule_2_url = molecule_1_url = "Calmod_sample.pdb"
+            else:
+                molecule_1_url = f'./trajectories/pdb/{reference_category}/traj_{reference_run}.pdb'
+                molecule_2_url = f'./trajectories/pdb/{comparison_category}/traj_{comparison_run}.pdb'
+            html_code = generate_ngl_viewer_html(clicked_bin_frame_mid, molecule_1_url, molecule_2_url, KE_pairs)
             components.html(html_code, height=600)
         
 

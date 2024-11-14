@@ -177,7 +177,7 @@ def plot_aa_distribution_by_frame_mid(result_df, n_percent):
     )
 
     event_data = st.plotly_chart(fig, use_container_width=True, on_select='rerun')
-    st.write(event_data)
+    # st.write(event_data)
     
     # Return the bin_frame_mid of the clicked bar if any bar was clicked
     if len(event_data['selection']['points']) > 0:
@@ -224,7 +224,7 @@ def plot_residue_category_distribution(result_df):
 
     # Plot the chart in Streamlit and add click event functionality
     event_data = st.plotly_chart(fig, use_container_width=True, on_select='rerun')
-    st.write(event_data)
+    # st.write(event_data)
     
     # Return the clicked frame if any bar was clicked
     if len(event_data['selection']['points']) > 0:
