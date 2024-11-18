@@ -298,10 +298,11 @@ def render_visualization(reference_data, comparison_data, resolution, reference_
 
                 # Update clicked_bin_frame_mid based on button clicks
                 if prev_clicked:
-                    st.session_state['act_cent_frame'] -= step_res
+                    act_cent_frame -= step_res
                 elif next_clicked:
-                    st.session_state['act_cent_frame'] += step_res
-            html_code = generate_ngl_viewer_html(clicked_bin_frame_mid, molecule_1_url, molecule_2_url, KE_pairs)
+                    act_cent_frame += step_res
+                st.session_state['act_cent_frame'] = act_cent_frame
+            html_code = generate_ngl_viewer_html(act_cent_frame, molecule_1_url, molecule_2_url, KE_pairs)
             components.html(html_code, height=600)
         
 
